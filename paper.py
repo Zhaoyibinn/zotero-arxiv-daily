@@ -1,6 +1,7 @@
 from typing import Optional
 from functools import cached_property
 from tempfile import TemporaryDirectory
+from datetime import datetime
 import arxiv
 import tarfile
 import re
@@ -39,6 +40,10 @@ class ArxivPaper:
     @property
     def pdf_url(self) -> str:
         return self._paper.pdf_url
+    
+    @property
+    def published(self) -> datetime:
+        return self._paper.published
     
     @cached_property
     def code_url(self) -> Optional[str]:
