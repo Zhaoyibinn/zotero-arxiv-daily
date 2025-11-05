@@ -46,16 +46,35 @@ def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
     return new_corpus
 
 
-def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
+from datetime import datetime, timedelta
+
+def get_arxiv_paper(query:str, debug:bool=False, days:int=7) -> list[ArxivPaper]:
     client = arxiv.Client(num_retries=10,delay_seconds=10)
     feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
     if 'Feed error for query' in feed.feed.title:
         raise Exception(f"Invalid ARXIV_QUERY: {query}.")
+    
     if not debug:
         papers = []
-        all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']
-        bar = tqdm(total=len(all_paper_ids),desc="Retrieving Arxiv papers")
-        for i in range(0,len(all_paper_ids),50):
+        # 计算时间阈值
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        # 修改这里：移除 arxiv_announce_type == 'new' 的筛选
+        # 改为基于发布时间的筛选
+        all_paper_ids = []
+        for entry in feed.entries:
+            paper_id = entry.id.removeprefix("oai:arXiv.org:")
+            # 检查论文发布时间
+            if hasattr(entry, 'published_parsed'):
+                publish_time = datetime(*entry.published_parsed[:6])
+                if publish_time >= cutoff_date:
+                    all_paper_ids.append(paper_id)
+            else:
+                # 如果没有时间信息，保留该论文
+                all_paper_ids.append(paper_id)
+        
+        bar = tqdm(total=len(all_paper_ids), desc=f"Retrieving Arxiv papers from last {days} days")
+        for i in range(0, len(all_paper_ids), 50):
             search = arxiv.Search(id_list=all_paper_ids[i:i+50])
             batch = [ArxivPaper(p) for p in client.results(search)]
             bar.update(len(batch))
