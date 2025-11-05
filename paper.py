@@ -40,6 +40,10 @@ class ArxivPaper:
     def pdf_url(self) -> str:
         return self._paper.pdf_url
     
+    @property
+    def published(self):
+        return self._paper.published
+    
     @cached_property
     def code_url(self) -> Optional[str]:
         s = requests.Session()
